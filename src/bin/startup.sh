@@ -1,5 +1,8 @@
 #!/bin/bash
+#============================
+需要安装: curl
 
+#============================
 #======================================================================
 # 项目启动shell脚本
 # boot目录: spring boot jar包
@@ -32,6 +35,8 @@ BASE_PATH=`pwd`
 # 外部配置文件绝对目录,如果是目录需要/结尾，也可以直接指定文件
 # 如果指定的是目录,spring则会读取目录中的所有配置文件
 CONFIG_DIR=${BASE_PATH}"/config/"
+
+STATUS_URL='/api/v2/common/AlgoCommon/status'
 
 SERVER_PORT=`sed '/server.port=/!d;s/.*=//' $CONFIG_DIR/application.properties | tr -d '\r'`
 # 项目日志输出绝对路径
@@ -151,7 +156,7 @@ while [ $COUNT -lt 1 ]; do
     echo -e ".\c"
     sleep 2
     num=$(( num + 1 ))
-    COUNT=`(sleep 1; echo -e '\n'; sleep 1; echo status; sleep 1)| curl 127.0.0.1:${SERVER_PORT}/api/v2/common/AlgoCommon/status | grep -c status_ok`
+    COUNT=`(sleep 1; echo -e '\n'; sleep 1; echo status; sleep 1)| curl 127.0.0.1:${SERVER_PORT}${STATUS_URL} | grep -c status_ok`
     if [ $COUNT -gt 0 ]; then
         break
     fi
