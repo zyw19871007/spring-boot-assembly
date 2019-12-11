@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /bin/shell
 
 #======================================================================
 # 项目启动shell脚本
@@ -17,7 +17,7 @@
 APPLICATION="@project.name@"
 
 # 项目启动jar包名称
-APPLICATION_JAR="@build.finalName@.xjar"
+APPLICATION_JAR="@build.finalName@.jar"
 
 # bin目录绝对路径
 BIN_PATH=$(cd `dirname $0`; pwd)
@@ -33,7 +33,6 @@ BASE_PATH=`pwd`
 # 如果指定的是目录,spring则会读取目录中的所有配置文件
 CONFIG_DIR=${BASE_PATH}"/config/"
 
-SERVER_PORT=`sed '/server.port=/!d;s/.*=//' $CONFIG_DIR/application.properties | tr -d '\r'`
 # 项目日志输出绝对路径
 LOG_DIR=${BASE_PATH}"/logs"
 LOG_FILE="${APPLICATION}.log"
@@ -45,47 +44,33 @@ LOG_BACK_DIR="${LOG_DIR}/back/"
 LOG_STARTUP_PATH="${LOG_DIR}/startup.log"
 
 # 当前时间
-NOW=`date +'%Y-%m-%d-%H-%M-%S'`
-NOW_PRETTY=`date +'%Y-%m-%d %H:%M:%S'`
+NOW=`date +'%Y-%m-%m-%H-%M-%S'`
+NOW_PRETTY=`date +'%Y-%m-%m %H:%M:%S'`
 
 # 启动日志
 STARTUP_LOG="================================================ ${NOW_PRETTY} ================================================\n"
 
 # 如果logs文件夹不存在,则创建文件夹
-if [ ! -d "${LOG_DIR}" ]; then
+if [[ ! -d "${LOG_DIR}" ]]; then
   mkdir "${LOG_DIR}"
 fi
 
 # 如果logs/back文件夹不存在,则创建文件夹
-#if [[ ! -d "${LOG_BACK_DIR}" ]]; then
-#  mkdir "${LOG_BACK_DIR}"
-#fi
+if [[ ! -d "${LOG_BACK_DIR}" ]]; then
+  mkdir "${LOG_BACK_DIR}"
+fi
 
 # 如果项目运行日志存在,则重命名备份
-#if [[ -f "${LOG_PATH}" ]]; then
-#	mv ${LOG_PATH} "${LOG_BACK_DIR}/${APPLICATION}_back_${NOW}.log"
-#fi
+if [[ -f "${LOG_PATH}" ]]; then
+	mv ${LOG_PATH} "${LOG_BACK_DIR}/${APPLICATION}_back_${NOW}.log"
+fi
 
 # 创建新的项目运行日志
-#echo "" > ${LOG_PATH}
+echo "" > ${LOG_PATH}
 
 # 如果项目启动日志不存在,则创建,否则追加
 #echo "${STARTUP_LOG}" >> ${LOG_STARTUP_PATH}
 
-PIDS=`ps -ef | grep java | grep -v grep | grep "${BASE_PATH}/boot/" |awk '{print $2}'`
-if [ -n "$PIDS" ]; then
-    echo "ERROR: The ${BASE_PATH}/boot/ already started!"
-    echo "PID: $PIDS"
-    exit 1
-fi
-
-if [ -n "$SERVER_PORT" ]; then
-    SERVER_PORT_COUNT=`netstat -tln | grep $SERVER_PORT | wc -l`
-    if [ $SERVER_PORT_COUNT -gt 0 ]; then
-        echo "ERROR: The $SERVER_NAME port $SERVER_PORT already used!"
-        exit 1
-    fi
-fi
 #==========================================================================================
 # JVM Configuration
 # -Xmx256m:设置JVM最大可用内存为256m,根据项目实际情况而定，建议最小和最大设置成一样。
@@ -96,7 +81,7 @@ fi
 # -XX:MaxMetaspaceSize=320m:限制Metaspace增长的上限，防止因为某些情况导致Metaspace无限的使用本地内存，影响到其他程序
 # -XX:-OmitStackTraceInFastThrow:解决重复异常不打印堆栈信息问题
 #==========================================================================================
-JAVA_OPT="-server -Xms1024m -Xmx2048m -Xmn512m -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=256m"
+JAVA_OPT="-server -Xms256m -Xmx256m -Xmn512m -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=256m"
 JAVA_OPT="${JAVA_OPT} -XX:-OmitStackTraceInFastThrow"
 
 #=======================================================
@@ -120,48 +105,17 @@ STARTUP_LOG="${STARTUP_LOG}application JAVA_OPT : ${JAVA_OPT}\n"
 
 
 # 打印启动命令
-STARTUP_LOG="${STARTUP_LOG}application startup command: nohup java ${JAVA_OPT} -jar ${BASE_PATH}/boot/${APPLICATION_JAR} --spring.config.location=${CONFIG_DIR} -Dlogging.path=${LOG_DIR} > /dev/null 2>&1 &\n"
+STARTUP_LOG="${STARTUP_LOG}application startup command: nohup java ${JAVA_OPT} -jar ${BASE_PATH}/boot/${APPLICATION_JAR} --spring.config.location=${CONFIG_DIR} > ${LOG_PATH} 2>&1 &\n"
+
 
 #======================================================================
 # 执行启动命令：后台启动项目,并将日志输出到项目根目录下的logs文件夹下
 #======================================================================
-nohup java ${JAVA_OPT} -jar ${BASE_PATH}/boot/${APPLICATION_JAR} --spring.config.location=${CONFIG_DIR} -Dlogging.path=${LOG_DIR} > /dev/null 2>&1 &
-#nohup java ${JAVA_OPT} -jar ${BASE_PATH}/boot/${APPLICATION_JAR} --spring.config.location=${CONFIG_DIR} -Dlogging.path=${LOG_DIR} > ${LOG_PATH} 2>&1 &
+nohup java ${JAVA_OPT} -jar ${BASE_PATH}/boot/${APPLICATION_JAR} --spring.config.location=${CONFIG_DIR} > ${LOG_PATH} 2>&1 &
 
-echo -e ${STARTUP_LOG}
-
-COUNT=0
-num=0
-while [ $COUNT -lt 1 ]; do
-    echo -e ".\c"
-    sleep 2
-    num=$(( num + 1 ))
-    COUNT=`ps -ef | grep java | grep -v grep | grep "${BASE_PATH}/boot/${APPLICATION_JAR}" | awk '{print $2}' | wc -l`
-
-    if [ $COUNT -gt 0 ]; then
-        break
-    fi
-    if [ $num -gt 10 ]; then
-        break
-    fi
-done
-COUNT=0
-num=0
-while [ $COUNT -lt 1 ]; do
-    echo -e ".\c"
-    sleep 2
-    num=$(( num + 1 ))
-    COUNT=`(sleep 1; echo -e '\n'; sleep 1; echo status; sleep 1)| curl 127.0.0.1:${SERVER_PORT}/api/v2/common/AlgoCommon/status | grep -c status_ok`
-    if [ $COUNT -gt 0 ]; then
-        break
-    fi
-    if [ $num -gt 100 ]; then
-        exit 1;
-    fi
-done
 
 # 进程ID
-PID=$(ps -ef | grep "${BASE_PATH}/boot/${APPLICATION_JAR}" | grep -v grep | awk '{ print $2 }')
+PID=$(ps -ef | grep "${APPLICATION_JAR}" | grep -v grep | awk '{ print $2 }')
 STARTUP_LOG="${STARTUP_LOG}application pid: ${PID}\n"
 
 # 启动日志追加到启动日志文件中
@@ -169,16 +123,5 @@ echo -e ${STARTUP_LOG} >> ${LOG_STARTUP_PATH}
 # 打印启动日志
 echo -e ${STARTUP_LOG}
 
-# 是否tail日志
-tail_flag=$1
-echo ${tail_flag}
-if [ ${tail_flag}a = 'notail'a ]; then
-  exit 0;
-fi
 # 打印项目日志
-#cd $LOG_DIR
-latest_file=`ls -ltr $LOG_DIR/ |grep logback | tail -1 | awk '{print $9}'`
-if [ -n "${latest_file}" ]; then
-  echo "tail -f ${LOG_DIR}/${latest_file}"
-  tail -f ${LOG_DIR}/${latest_file}
-fi
+tail -f ${LOG_PATH}

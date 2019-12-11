@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /bin/shell
 
 #======================================================================
 # 项目重启shell脚本
@@ -8,22 +8,17 @@
 # author: geekidea
 # date: 2018-12-2
 #======================================================================
-DIRNAME=$0
-if [ "${DIRNAME:0:1}" = "/" ];then
-    CUR=`dirname $DIRNAME`
-else
-    CUR="`pwd`"/"`dirname $DIRNAME`"
-fi
+
 # 项目名称
 APPLICATION="@project.name@"
 
 # 项目启动jar包名称
-APPLICATION_JAR="@build.finalName@.xjar"
+APPLICATION_JAR="@build.finalName@.jar"
 
 # 停服
 echo stop ${APPLICATION} Application...
-sh $CUR/shutdown.sh
+sh shutdown.sh
 
 # 启动服务
 echo start ${APPLICATION} Application...
-sh $CUR/startup.sh "$@"
+sh startup.sh
